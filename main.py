@@ -9,8 +9,9 @@
     #-model
     #-Executor
     #-Definidor de scritps
+    #-Analisador de tarefas rapidas (poderia ser outro programa, acredito que eh uma funcao separada)
 
-
+#colocar o shell aqui? Ou produzir parses par ao sell a partir daqui?
 def if __name__ == "__main__":
     
     while True:
