@@ -7,6 +7,7 @@ scriptpattern=".*\.(R$|py$)"
 cronstatus=$(ps -ef | grep crond)
 atdstatus=$(ps -e | grep -e "atd$")
 
+# Gera o schedule do crontab e edita o arquivo
 gen_crontab() {
 	flag=${2:(-1)}
 	value=${2:0:(-1)}
@@ -26,15 +27,13 @@ gen_crontab() {
 	(crontab -l 2>/dev/null; echo "$cronjob") | crontab -
 }
 
-edit_crontab() {
-	echo "$1"
-}
-
+# Cria uma entrada no 'at'
 gen_at() {
 	time=$(echo $2 | sed -r 's/.{2}/&:/')
 	echo "$1" | at "$time" 2> /dev/null
 }
 
+# Verifica se o script deve ser executado periodicamente (R) ou uma vez (E)
 generate_schedule() {
 	flag=${2:0:1}	
 	value=${2:1}
@@ -46,6 +45,7 @@ generate_schedule() {
 	esac
 }
 
+# Faz o parse dos arquivos e extrai as flags
 parse_schedule() {
 	for file in $files; do
 		flags=$(sed -e "s/.*_//" -e "s/\.[^.]*$//"  <<< $file)
@@ -53,11 +53,28 @@ parse_schedule() {
 	done
 }
 
+# Exibe a ajuda para o comando
+display_help() {
+	echo "scheduler.sh - Gera um cronograma de execucão para scripts"
+	echo "Uso: ./scheduler.sh SCRIPTFOLDER"
+	echo "Flags:"
+	echo " -h  Exibe esse menu de ajuda"
+}
+
+
+if [[ -z $1 || $* == *-h* ]]
+then
+	display_help
+	exit  1
+fi
+
 if [[ -z "$cronstatus" || -z $atdstatus ]]
 then
 	echo "cron ou atd não iniciados"
+	exit 1
 else
 	files=$(find $scriptfolder -type f -regextype egrep -regex "$scriptpattern" \
 	-exec realpath {} \;)
 	parse_schedule "$files"
+	exit 0
 fi
