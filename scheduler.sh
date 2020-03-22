@@ -7,18 +7,55 @@ scriptpattern=".*\.(R$|py$)"
 cronstatus=$(ps -ef | grep crond)
 atdstatus=$(ps -e | grep -e "atd$")
 
+gen_crontab() {
+	flag=${2:(-1)}
+	value=${2:0:(-1)}
+	intervals="* * * * *"
+
+	case $flag in
+		"M") intervals=$(echo "$intervals" | sed -e "s/\*/\*\/${value}/1") ;;
+		"H") intervals=$(echo "$intervals" | sed -e "s/\*/\*\/${value}/2") ;; 
+	esac
+
+	case $extension in
+		"py") executable="python" ;;
+		"R") executable="R" ;;
+	esac	
+	cronjob=$(printf "%b %b %b\n" "$intervals" "$executable" "$1")
+
+	(crontab -l 2>/dev/null; echo "$cronjob") | crontab -
+}
+
+edit_crontab() {
+	echo "$1"
+}
+
+gen_at() {
+	time=$(echo $2 | sed -r 's/.{2}/&:/')
+	echo "$1" | at "$time" 2> /dev/null
+}
+
+generate_schedule() {
+	flag=${2:0:1}	
+	value=${2:1}
+	extension="${file##*.}"
+
+	case $flag in
+		"E") gen_at $1 "$value" ;;
+		"R") gen_crontab $1 "$value" "$extension" 
+	esac
+}
 
 parse_schedule() {
-	suffix=".R|.py"
 	for file in $files; do
-		foo=$(sed -e "s/.*_//" -e "s/\.[^.]*$//"  <<< $file)
-		echo "$foo"
+		flags=$(sed -e "s/.*_//" -e "s/\.[^.]*$//"  <<< $file)
+		generate_schedule "$file" "$flags"
 	done
 }
 
 if [[ -z "$cronstatus" || -z $atdstatus ]]
 then
-	echo "cron or atd not started"
+	echo "cron ou atd não iniciados"
 else
 	files=$(find $scriptfolder -type f -regextype egrep -regex "$scriptpattern" \
 	-exec realpath {} \;)
