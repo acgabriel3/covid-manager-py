@@ -3,6 +3,7 @@
 # de execucão simples (E)
 
 scriptfolder=$1
+logfolder=$2
 scriptpattern=".*\.(R$|py$)"
 cronstatus=$(ps -ef | grep crond)
 atdstatus=$(ps -e | grep -e "atd$")
@@ -10,7 +11,7 @@ atdstatus=$(ps -e | grep -e "atd$")
 get_executable() {
 	case $1 in
 		"py") executable="python" ;;
-		"R") executable="R -f" ;;
+		"R") executable="R -q -f" ;;
 	esac
 	echo "$executable"	
 }
@@ -22,7 +23,7 @@ get_executable() {
 #	$3 - Extensão do arquivo
 gen_crontab() {
 	flag=${2:(-1)}
-	value=${2:0:(-1)}
+	value=${2:0:(-1)} 
 	intervals="* * * * *"
 
 	case $flag in
@@ -31,8 +32,9 @@ gen_crontab() {
 	esac
 
 	executable=$(get_executable "$3")
-	cronjob=$(printf "%b %b %b >> /tmp/logfile\n" "$intervals" "$executable" "$1")
-
+	cronjob=$(printf "%b %b %b >> ${logfolder}/cronlogs\n" "$intervals" "$executable" "$1")
+	echo "$cronjob"
+		
 	(crontab -l 2>/dev/null; echo "$cronjob") | crontab -
 }
 
@@ -44,7 +46,7 @@ gen_crontab() {
 gen_at() {
 	time=$(echo $2 | sed -r 's/.{2}/&:/')
 	executable=$(get_executable $3)
-	command=$(echo "$executable $1 >> /tmp/logfile2")
+	command=$(echo "$timestamp" "$executable $1 >> ${logfolder}/atlogs")
 	echo "$command" | at "$time" 2> /dev/null
 }
 
@@ -65,7 +67,7 @@ generate_schedule() {
 
 # Faz o parse dos arquivos e extrai as flags
 parse_schedule() {
-	for file in $files; do
+	for file in $1; do
 		flags=$(sed -e "s/.*_//" -e "s/\.[^.]*$//"  <<< $file)
 		generate_schedule "$file" "$flags"
 	done
@@ -73,14 +75,14 @@ parse_schedule() {
 
 # Exibe a ajuda para o comando
 display_help() {
-	echo "scheduler.sh - Gera um cronograma de execucão para scripts"
-	echo "Uso: ./scheduler.sh SCRIPTFOLDER"
+	echo "scheduler.sh - Gera um cronograma de execucão para scripts, passando-se a pasta onde estão os scripts e a pasta onde serão salvos os logs."
+	echo "Uso: ./scheduler.sh SCRIPTFOLDER LOGFOLDER"
 	echo "Flags:"
 	echo " -h  Exibe esse menu de ajuda"
 }
 
 # Main
-if [[ -z $1 || $* == *-h* ]]
+if [[ -z $1 || -z $2 ||$* == *-h* ]]
 then
 	display_help
 	exit  1
@@ -91,6 +93,7 @@ then
 	echo "cron ou atd não iniciados"
 	exit 1
 else
+	logfolder=$(echo "$logfolder" | sed 's/\/$//')
 	files=$(find $scriptfolder -type f -regextype egrep -regex "$scriptpattern" \
 	-exec realpath {} \;)
 	parse_schedule "$files"
