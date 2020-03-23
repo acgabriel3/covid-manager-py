@@ -32,9 +32,7 @@ gen_crontab() {
 	esac
 
 	executable=$(get_executable "$3")
-	cronjob=$(printf "%b %b %b >> ${logfolder}/cronlogs\n" "$intervals" "$executable" "$1")
-	echo "$cronjob"
-		
+	cronjob=$(printf "%b %b %b >> ${logfolder}/cronlogs\n" "$intervals" "$executable" "$1")	
 	(crontab -l 2>/dev/null; echo "$cronjob") | crontab -
 }
 
@@ -45,7 +43,7 @@ gen_crontab() {
 #	$3 - Extensão do arquivo
 gen_at() {
 	time=$(echo $2 | sed -r 's/.{2}/&:/')
-	executable=$(get_executable $3)
+	executable=$(get_executable "$3")
 	command=$(echo "$timestamp" "$executable $1 >> ${logfolder}/atlogs")
 	echo "$command" | at "$time" 2> /dev/null
 }
@@ -68,7 +66,7 @@ generate_schedule() {
 # Faz o parse dos arquivos e extrai as flags
 parse_schedule() {
 	for file in $1; do
-		flags=$(sed -e "s/.*_//" -e "s/\.[^.]*$//"  <<< $file)
+		flags=$(sed -e "s/.*@//" -e "s/\.[^.]*$//"  <<< $file)
 		generate_schedule "$file" "$flags"
 	done
 }
