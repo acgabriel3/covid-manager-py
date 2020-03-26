@@ -5,7 +5,7 @@
 scriptfolder=$1
 logfolder=$2
 scriptpattern=".*\.(R$|py$)"
-cronstatus=$(pgrep crond)
+cronstatus=$(pgrep "cron")
 atdstatus=$(pgrep "atd$")
 
 get_executable() {
